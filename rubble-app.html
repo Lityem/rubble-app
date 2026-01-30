@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Rubble v3.4 (Fixed Markers)</title>
+    <title>Smart Rubble v3.2 (Glass & Bin)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* --- THEME VARIABLES --- */
@@ -66,17 +66,13 @@
         .search-container { padding: 0 15px; margin-top: 10px; }
         .search-input { width: 100%; padding: 10px 15px; border-radius: 50px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main); box-sizing: border-box; outline: none; box-shadow: var(--shadow); }
         
-        .stock-item { display: flex; align-items: center; gap: 12px; }
-        
-        /* UPDATED CSS FOR CIRCULAR LIST IMAGES */
-        .stock-img { 
-            width: 60px; 
-            height: 60px; 
-            border-radius: 50%; /* Makes it circular */
-            object-fit: cover; 
-            border: 3px solid var(--bg-container); /* White border */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Shadow for pop */
-        }
+        .stock-item { display: flex; align-items: flex-start; gap: 12px; }
+        .stock-marker { width: 20px; height: 25px; background-image: url('https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi2.png'); background-size: cover; background-position: center; flex-shrink: 0; margin-top: 2px; }
+        /* Markers */
+        .marker-green { filter: hue-rotate(100deg) brightness(1.2) saturate(1.5); }
+        .marker-yellow { filter: hue-rotate(45deg) brightness(1.5) saturate(2); }
+        .marker-red { filter: inherit; }
+        .marker-cyan { filter: hue-rotate(180deg) brightness(1.5) saturate(2); } /* For Glass */
 
         .important-section { padding: 0 15px; margin-top: 20px; }
         .important-card { background: var(--card-bg); padding: 12px; border-radius: 10px; border-left: 4px solid #f59e0b; margin-bottom: 10px; box-shadow: var(--shadow); font-size: 13px; }
@@ -122,7 +118,7 @@
         </div>
 
         <div class="header">
-            <div style="font-weight:bold; font-size:18px;">♻️ Smart Rubble <span style="font-size:10px; opacity:0.8;">v3.4</span></div>
+            <div style="font-weight:bold; font-size:18px;">♻️ Smart Rubble <span style="font-size:10px; opacity:0.8;">v3.2</span></div>
             <button class="notification-btn" onclick="toggleNotifications()">
                 🔔 <span class="badge" id="notifBadge"></span>
             </button>
@@ -238,7 +234,7 @@
                     <span>🗑️ Recycle Bin</span><span>›</span>
                 </div>
                 <div class="settings-item">
-                    <span>App Version</span><span style="color:var(--text-muted)">v3.4</span>
+                    <span>App Version</span><span style="color:var(--text-muted)">v3.2</span>
                 </div>
                 <div id="logoutSection"></div>
             </div>
@@ -252,6 +248,8 @@
                     <button class="btn-action" style="background:gray;" onclick="switchPage('settings')">Cancel</button>
                 </div>
             </div>
+
+            <div id="recycle" class="page"><h2 style="margin:20px;">Recycling Hub</h2><div class="list-item">🧱 Concrete: 450 tons available</div></div>
         </div>
 
         <div class="bottom-nav">
@@ -269,39 +267,41 @@
         let currentZoom = 1;
         let stats = { co2: 2.40, reports: 128, tons: 1420, reused: 14 };
         
-        // --- LOCATIONS DATA (12 Items) ---
+        // ADDED GLASS TO LOCATIONS
         let rubbleLocations = [
-            { id: 1, name: "Concrete Rubble", lat: 25.2854, lng: 51.5310, tons: 45, distance: "2.3 km", score: 82, image: 'concrete.jpeg' },
-            { id: 2, name: "Mixed Debris", lat: 25.2900, lng: 51.5400, tons: 32, distance: "1.8 km", score: 75, image: 'debris.jpeg' },
-            { id: 3, name: "Metal Scrap", lat: 25.2800, lng: 51.5250, tons: 28, distance: "3.1 km", score: 90, image: 'metal.jpeg' },
-            { id: 4, name: "Glass Shards", lat: 25.2880, lng: 51.5380, tons: 12, distance: "1.2 km", score: 95, image: 'glass.jpeg' },
-            { id: 5, name: "Brick Rubble", lat: 25.2820, lng: 51.5350, tons: 38, distance: "2.7 km", score: 88, image: 'brick.jpeg' },
-            { id: 6, name: "Asphalt Chunks", lat: 25.2950, lng: 51.5200, tons: 60, distance: "4.5 km", score: 70, image: 'asphalt.jpeg' },
-            { id: 7, name: "Timber Waste", lat: 25.2750, lng: 51.5450, tons: 15, distance: "3.8 km", score: 85, image: 'timber.jpeg' },
-            { id: 8, name: "Ceramic Tiles", lat: 25.2860, lng: 51.5150, tons: 8, distance: "2.1 km", score: 92, image: 'tiles.jpeg' },
-
+            { id: 1, name: "Concrete Rubble", lat: 25.2854, lng: 51.5310, tons: 45, distance: "2.3 km", score: 82, color: 'green' },
+            { id: 2, name: "Mixed Debris", lat: 25.2900, lng: 51.5400, tons: 32, distance: "1.8 km", score: 75, color: 'green' },
+            { id: 3, name: "Metal Scrap", lat: 25.2800, lng: 51.5250, tons: 28, distance: "3.1 km", score: 90, color: 'yellow' },
+            { id: 4, name: "Glass Shards", lat: 25.2880, lng: 51.5380, tons: 12, distance: "1.2 km", score: 95, color: 'cyan' }, // GLASS ADDED
+            { id: 5, name: "Brick Rubble", lat: 25.2820, lng: 51.5350, tons: 38, distance: "2.7 km", score: 88, color: 'green' }
         ];
 
         let notifications = [
             { id: 1, title: "Welcome!", text: "Start reporting rubble to earn points.", page: "home", important: false }
         ];
         
+        // NEW ARRAY FOR DELETED MESSAGES
         let deletedNotifications = [];
 
-        // --- CHART JS INIT ---
+        // --- CHART JS INIT (UPDATED WITH GLASS) ---
         let ecoChartInstance = null;
         function initChart() {
             const ctx = document.getElementById('ecoChart').getContext('2d');
             if (ecoChartInstance) ecoChartInstance.destroy();
             
+            // Switched to BAR chart to better show Categories (Glass, Metal, Concrete)
             ecoChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: ['Concrete', 'Metal', 'Glass'],
                     datasets: [{
                         label: 'Recycled Volume (Tons)',
-                        data: [450, 200, 120],
-                        backgroundColor: ['#0d9488', '#f59e0b', '#22d3ee'],
+                        data: [450, 200, 120, 80, 50], // Glass has data now
+                        backgroundColor: [
+                            '#0d9488', // Teal
+                            '#f59e0b', // Orange
+                            '#22d3ee', // Cyan (Glass)
+                        ],
                         borderRadius: 5
                     }]
                 },
@@ -314,51 +314,6 @@
             });
         }
 
-        // --- CANVAS ICON GENERATOR (FIXES WHITE RING ISSUE) ---
-        function createCircularIcon(imageUrl, callback) {
-            const img = new Image();
-            img.crossOrigin = "Anonymous"; // Attempt to handle CORS
-            img.src = imageUrl;
-            
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const size = 60; // Icon size (px)
-                canvas.width = size;
-                canvas.height = size;
-                const ctx = canvas.getContext('2d');
-
-                // 1. Create circular clipping path
-                ctx.beginPath();
-                ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
-                ctx.closePath();
-                ctx.clip();
-
-                // 2. Draw the image
-                ctx.drawImage(img, 0, 0, size, size);
-
-                // 3. Draw the white border
-                ctx.beginPath();
-                ctx.arc(size/2, size/2, size/2 - 2, 0, Math.PI * 2); 
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = '#ffffff';
-                ctx.stroke();
-
-                // 4. Return the data URL
-                callback(canvas.toDataURL());
-            };
-
-            // Fallback if image fails to load
-            img.onerror = function() {
-                const canvas = document.createElement('canvas');
-                canvas.width = 60; canvas.height = 60;
-                const ctx = canvas.getContext('2d');
-                ctx.beginPath(); ctx.arc(30, 30, 30, 0, Math.PI*2);
-                ctx.fillStyle = '#999'; ctx.fill();
-                ctx.strokeStyle = 'white'; ctx.lineWidth = 4; ctx.stroke();
-                callback(canvas.toDataURL());
-            }
-        }
-
         // --- GOOGLE MAPS INIT ---
         let map;
         function initMap() {
@@ -369,25 +324,21 @@
             });
 
             rubbleLocations.forEach(loc => {
-                // Asynchronously generate the icon via Canvas
-                createCircularIcon(loc.image, (iconData) => {
-                    const marker = new google.maps.Marker({
-                        position: { lat: loc.lat, lng: loc.lng },
-                        map: map, 
-                        title: loc.name,
-                        icon: {
-                            url: iconData, 
-                            scaledSize: new google.maps.Size(50, 50),
-                            origin: new google.maps.Point(0, 0),
-                            anchor: new google.maps.Point(25, 25)
-                        }
-                    });
+                let iconUrl = "http://maps.google.com/mapfiles/ms/icons/green-dot.png"; // Green
+                if (loc.color === 'yellow') iconUrl = "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
+                if (loc.color === 'red') iconUrl = "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+                if (loc.color === 'cyan') iconUrl = "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"; // Blue for Glass
 
-                    const infoWindow = new google.maps.InfoWindow({
-                        content: `<div style="color:black; text-align:center;"><img src="${loc.image}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; margin-bottom:5px;"><br><b>${loc.name}</b><br>${loc.tons} tons available</div>`
-                    });
-                    marker.addListener("click", () => { infoWindow.open(map, marker); });
+
+                const marker = new google.maps.Marker({
+                    position: { lat: loc.lat, lng: loc.lng },
+                    map: map, title: loc.name, icon: iconUrl
                 });
+
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `<b>${loc.name}</b><br>${loc.tons} tons available`
+                });
+                marker.addListener("click", () => { infoWindow.open(map, marker); });
             });
         }
 
@@ -396,16 +347,21 @@
             const list = document.getElementById('notifList');
             const impList = document.getElementById('importantList');
             const badge = document.getElementById('notifBadge');
+            
             list.innerHTML = ""; impList.innerHTML = "";
 
+            // EMPTY STATE LOGIC
             if (notifications.length === 0) {
                 list.innerHTML = '<div style="text-align:center; padding:20px; color:gray;">No new notifications ✅</div>';
                 badge.style.display = 'none';
-            } else { badge.style.display = 'block'; }
+            } else {
+                badge.style.display = 'block';
+            }
 
             notifications.forEach(n => {
                 const item = document.createElement('div');
                 item.className = 'notif-item';
+                // Click to redirect
                 item.innerHTML = `
                     <div onclick="handleNotifClick('${n.page}')" style="flex:1; cursor:pointer;">
                         <b>${n.title}</b><br><span style="color:var(--text-muted)">${n.text}</span>
@@ -415,6 +371,7 @@
                         <button onclick="deleteNotif(${n.id})">🗑️</button>
                     </div>`;
                 list.appendChild(item);
+
                 if (n.important) {
                     const card = document.createElement('div'); card.className = 'important-card';
                     card.innerHTML = `<b>${n.title}</b>: ${n.text}`; impList.appendChild(card);
@@ -422,19 +379,25 @@
             });
         }
 
-        function handleNotifClick(pageId) { switchPage(pageId); toggleNotifications(); }
+        function handleNotifClick(pageId) {
+            switchPage(pageId);
+            toggleNotifications(); // Close panel
+        }
 
         function deleteNotif(id) {
             const item = notifications.find(x => x.id === id);
             if (item) {
-                deletedNotifications.push(item);
+                deletedNotifications.push(item); // Move to Bin
                 notifications = notifications.filter(x => x.id !== id);
                 renderNotifications();
                 showToast("Moved to Recycle Bin");
             }
         }
 
-        function openRecycleBin() { switchPage('recycleBin'); renderBin(); }
+        function openRecycleBin() {
+            switchPage('recycleBin');
+            renderBin();
+        }
 
         function renderBin() {
             const list = document.getElementById('binList');
@@ -450,7 +413,8 @@
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div><b>${n.title}</b><br>${n.text}</div>
                         <button class="btn-action" style="width:auto; padding:5px 10px; font-size:12px;" onclick="restoreNotif(${n.id})">Restore ↩️</button>
-                    </div>`;
+                    </div>
+                `;
                 list.appendChild(item);
             });
         }
@@ -458,11 +422,11 @@
         function restoreNotif(id) {
             const item = deletedNotifications.find(x => x.id === id);
             if(item) {
-                notifications.unshift(item);
+                notifications.unshift(item); // Add back to top
                 deletedNotifications = deletedNotifications.filter(x => x.id !== id);
                 renderBin();
                 showToast("Message Restored");
-                renderNotifications();
+                renderNotifications(); // Update badge
             }
         }
 
@@ -478,18 +442,29 @@
             const tons = document.getElementById('tonInput').value;
             if (!loc || !tons) return alert("Please fill in all details");
 
+            // Add to Report List
             const list = document.getElementById('reportsList');
             const item = document.createElement('div'); item.className = 'list-item';
             let imgTag = currentImageData ? `<img src="${currentImageData}" onclick="openInspector('${currentImageData}')" style="width:100%; border-radius:8px; margin-bottom:10px; cursor:zoom-in;">` : '';
             item.innerHTML = `${imgTag}<strong>${loc}</strong><p style="color:gray; font-size:13px;">${tons} Tons • Status: Pending Review</p>`;
             list.prepend(item);
 
-            const newNotif = { id: Date.now(), title: "Report Submitted", text: `Details for ${loc}`, page: "reports", important: false };
+            // TRIGGER NEW NOTIFICATION
+            const newNotif = {
+                id: Date.now(),
+                title: "Report Submitted",
+                text: `Click to view details for ${loc}`,
+                page: "reports",
+                important: false
+            };
             notifications.unshift(newNotif);
             renderNotifications();
-            showToast("Report Posted!");
+
+            showToast("Report Posted & Notification Sent!");
             
-            document.getElementById('locInput').value = ""; document.getElementById('tonInput').value = "";
+            // Clear inputs
+            document.getElementById('locInput').value = ""; 
+            document.getElementById('tonInput').value = "";
             document.getElementById('previewContainer').innerHTML = "No Image Selected";
             currentImageData = "";
         }
@@ -508,7 +483,7 @@
             setTimeout(() => { document.getElementById('locInput').value = "25.285, 51.531"; }, 1000);
         }
 
-        // --- LIVE STOCK RENDER (WITH PHOTOS) ---
+        // --- LIVE STATS & STOCK RENDER ---
         function renderStockList(filterText = "") {
             const list = document.getElementById('stockList');
             list.innerHTML = '';
@@ -525,24 +500,25 @@
             filtered.forEach(loc => {
                 const item = document.createElement('div');
                 item.className = 'list-item stock-item';
-                
+                let colorClass = 'marker-green';
+                if(loc.color === 'yellow') colorClass = 'marker-yellow';
+                if(loc.color === 'red') colorClass = 'marker-red';
+                if(loc.color === 'cyan') colorClass = 'marker-cyan'; // Glass Class
+
                 item.innerHTML = `
-                    <img src="${loc.image}" class="stock-img" onclick="openInspector('${loc.image}')" alt="${loc.name}">
+                    <div class="stock-marker ${colorClass}"></div>
                     <div style="flex:1;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                           <strong>${loc.name}</strong>
-                           <span style="font-size:10px; background:rgba(13,148,136,0.1); color:var(--teal-primary); padding:2px 6px; border-radius:4px;">LIVE</span>
-                        </div>
-                        <p style="margin:2px 0; color:var(--text-muted); font-size:13px;">${loc.distance} • ${loc.tons} tons</p>
-                        <p style="margin:0; color:var(--teal-primary); font-size:12px; font-weight:600;">Reuse Score: ${loc.score}%</p>
+                        <strong>${loc.name}</strong>
+                        <p style="margin:5px 0; color:var(--text-muted); font-size:13px;">${loc.distance} • ${loc.tons} tons</p>
+                        <p style="margin:0; color:var(--teal-primary); font-size:12px;">Reuse Score: ${loc.score}%</p>
                     </div>
                 `;
                 list.appendChild(item);
             });
         }
-
         function filterStockList() { renderStockList(document.getElementById('stockSearch').value); }
         function updateLiveStats() {
+            // Simple visual update simulation
             const box = document.getElementById('statTonsbox');
             box.classList.add('updating');
             setTimeout(() => box.classList.remove('updating'), 500);
@@ -570,7 +546,8 @@
             const container = document.getElementById('profileSection');
             const logoutArea = document.getElementById('logoutSection');
             if (isLoggedIn) {
-                container.innerHTML = `<div class="profile-box"><h3>John Doe</h3><div class="xp-bar-bg"><div class="xp-bar-fill"></div></div><p style="font-size:10px; margin-top:5px;">Level 5 Recycler</p></div>`;
+                container.innerHTML = `
+                <div class="profile-box"><h3>John Doe</h3><div class="xp-bar-bg"><div class="xp-bar-fill"></div></div><p style="font-size:10px; margin-top:5px;">Level 5 Recycler</p></div>`;
                 logoutArea.innerHTML = `<div style="text-align:center; color:#ef4444; margin-top:20px; font-weight:bold; cursor:pointer;" onclick="logout()">Log Out</div>`;
             } else {
                 container.innerHTML = `<div class="profile-box" onclick="switchPage('auth')"><h3>Sign In</h3><p>Manage account</p></div>`;
@@ -584,8 +561,10 @@
         function adjustZoom(amt) { currentZoom += amt; if(currentZoom < 0.5) currentZoom = 0.5; document.getElementById('inspectImage').style.transform = `scale(${currentZoom})`; }
 
         // Init
-        renderProfile(); renderNotifications(); renderStockList();
+        renderProfile();
+        renderNotifications();
+        renderStockList();
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao&callback=initMap" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao&libraries=places&callback=initMap" async defer></script>
 </body>
 </html>

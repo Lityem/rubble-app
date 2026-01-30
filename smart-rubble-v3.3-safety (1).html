@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Rubble v3.3 (Safety & Equipment)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* --- THEME VARIABLES --- */
+        :root {
+            --bg-app: #f3f4f6;
+            --bg-container: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --teal-primary: #0d9488;
+            --teal-dark: #0f766e;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --shadow: 0 4px 6px rgba(0,0,0,0.05);
+            --accent-glass: #22d3ee;
+            --danger-red: #ef4444;
+            --warning-orange: #f59e0b;
+            --safe-green: #10b981;
+        }
+
+        .dark-mode {
+            --bg-app: #111827;
+            --bg-container: #1f2937;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --card-bg: #374151;
+            --border-color: #4b5563;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        /* --- CORE LAYOUT --- */
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-app); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; color: var(--text-main); transition: 0.3s; }
+        .app-container { width: 100%; max-width: 400px; background-color: var(--bg-container); border-radius: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; height: 880px; display: flex; flex-direction: column; position: relative; }
+
+        .header { background: linear-gradient(to right, var(--teal-primary), var(--teal-dark)); padding: 15px 20px; color: white; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .notification-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; position: relative; }
+        .badge { position: absolute; top: 0; right: 0; width: 10px; height: 10px; background-color: #ef4444; border-radius: 50%; border: 2px solid var(--teal-dark); display: none; }
+
+        .content { flex: 1; overflow-y: auto; background-color: var(--bg-app); }
+        .page { display: none; animation: fadeIn 0.3s; padding-bottom: 20px; }
+        .page.active { display: block; }
+
+        /* --- NOTIFICATION PANEL --- */
+        .notification-panel { position: absolute; top: 60px; right: 10px; width: 300px; background: var(--bg-container); border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 100; display: none; padding: 10px; max-height: 400px; overflow-y: auto; }
+        .notif-item { padding: 10px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 13px; transition: 0.2s; }
+        .notif-item:hover { background: rgba(0,0,0,0.02); }
+        .notif-actions button { border: none; background: none; cursor: pointer; font-size: 16px; margin-left: 5px; }
+
+        /* --- IMAGE INSPECTOR --- */
+        #imageModal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; flex-direction: column; justify-content: center; align-items: center; }
+        .zoom-controls { position: absolute; bottom: 50px; display: flex; gap: 20px; }
+        .zoom-btn { background: white; border: none; padding: 12px 20px; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
+        /* --- SAFETY & RISK INDICATORS --- */
+        .safety-card { background: var(--card-bg); margin: 15px; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow); }
+        .risk-indicator { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .risk-high { background: #fee2e2; color: #991b1b; }
+        .risk-medium { background: #fef3c7; color: #92400e; }
+        .risk-low { background: #d1fae5; color: #065f46; }
+        
+        .meter-container { margin: 15px 0; }
+        .meter-label { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; }
+        .meter-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; position: relative; }
+        .meter-fill { height: 100%; transition: width 0.3s ease; border-radius: 4px; }
+        .meter-safe { background: linear-gradient(90deg, var(--safe-green), #34d399); }
+        .meter-warning { background: linear-gradient(90deg, var(--warning-orange), #fbbf24); }
+        .meter-danger { background: linear-gradient(90deg, var(--danger-red), #f87171); }
+
+        /* --- EQUIPMENT RECOMMENDATIONS --- */
+        .equipment-list { margin-top: 10px; }
+        .equipment-item { display: flex; align-items: center; gap: 10px; padding: 8px; background: var(--bg-app); border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
+        .equipment-icon { width: 35px; height: 35px; background: var(--teal-primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .equipment-required { border-left: 3px solid var(--danger-red); }
+        .equipment-optional { border-left: 3px solid var(--warning-orange); opacity: 0.7; }
+
+        /* --- HOME SECTION --- */
+        .stats-card { background: linear-gradient(to bottom right, #eff6ff, #f0fdfa); padding: 20px; border-bottom: 1px solid var(--border-color); color: #1f2937; }
+        .grid-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .stat-box { background: white; padding: 10px 5px; border-radius: 8px; text-align: center; font-size: 11px; box-shadow: var(--shadow); transition: all 0.3s ease; }
+        .stat-box.updating { transform: scale(1.05); background-color: #ecfdf5; }
+
+        .map-wrapper { height: 250px; margin: 15px; border-radius: 15px; overflow: hidden; box-shadow: var(--shadow); position: relative; }
+        #map { height: 100%; width: 100%; }
+
+        /* SEARCH & LIST */
+        .search-container { padding: 0 15px; margin-top: 10px; }
+        .search-input { width: 100%; padding: 10px 15px; border-radius: 50px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main); box-sizing: border-box; outline: none; box-shadow: var(--shadow); }
+        
+        .stock-item { display: flex; align-items: flex-start; gap: 12px; position: relative; }
+        .stock-marker { width: 20px; height: 25px; background-image: url('https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi2.png'); background-size: cover; background-position: center; flex-shrink: 0; margin-top: 2px; }
+        
+        .stock-photo { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; cursor: pointer; transition: transform 0.2s; }
+        .stock-photo:hover { transform: scale(1.05); }
+        
+        /* Markers */
+        .marker-green { filter: hue-rotate(100deg) brightness(1.2) saturate(1.5); }
+        .marker-yellow { filter: hue-rotate(45deg) brightness(1.5) saturate(2); }
+        .marker-red { filter: inherit; }
+        .marker-cyan { filter: hue-rotate(180deg) brightness(1.5) saturate(2); }
+
+        .important-section { padding: 0 15px; margin-top: 20px; }
+        .important-card { background: var(--card-bg); padding: 12px; border-radius: 10px; border-left: 4px solid #f59e0b; margin-bottom: 10px; box-shadow: var(--shadow); font-size: 13px; }
+
+        /* --- SETTINGS & GAMIFICATION --- */
+        .profile-box { background: var(--teal-primary); color: white; margin: 15px; padding: 20px; border-radius: 15px; text-align: center; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden; }
+        .xp-bar-bg { width: 100%; height: 6px; background: rgba(255,255,255,0.3); border-radius: 10px; margin-top: 10px; overflow: hidden; }
+        .xp-bar-fill { height: 100%; width: 70%; background: #fbbf24; border-radius: 10px; }
+
+        .settings-item { background: var(--card-bg); margin: 5px 15px; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); cursor: pointer; }
+        
+        /* --- UI COMPONENTS --- */
+        .toast { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); background: #065f46; color: white; padding: 10px 25px; border-radius: 50px; font-size: 14px; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: slideDown 0.3s; }
+        .list-item { background: var(--card-bg); margin: 15px; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow); }
+        
+        .btn-action { background: var(--teal-primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; }
+        .btn-secondary { flex: 1; background: var(--bg-app); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+
+        .bottom-nav { background: var(--bg-container); border-top: 1px solid var(--border-color); padding: 12px 0; display: flex; justify-content: space-around; }
+        .nav-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; color: var(--text-muted); cursor: pointer; font-size: 10px; transition: 0.2s; }
+        .nav-btn.active { color: var(--teal-primary); font-weight: bold; }
+
+        .chart-container { position: relative; height: 250px; width: 95%; margin: 10px auto; }
+
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-reviewing { background: #dbeafe; color: #1e40af; }
+
+        /* Radiation pulse animation */
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .radiation-alert { animation: pulse 2s infinite; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideDown { from { top: 40px; opacity: 0; } to { top: 70px; opacity: 1; } }
+    </style>
+</head>
+<body id="appBody">
+
+    <div class="app-container">
+        <div id="successToast" class="toast">✅ Action Successful!</div>
+
+        <div id="imageModal">
+            <span style="position:absolute; top:20px; right:20px; color:white; font-size:30px; cursor:pointer;" onclick="closeInspector()">✕</span>
+            <div style="overflow:hidden; width:90%; height:70%; display:flex; justify-content:center; align-items:center;">
+                <img id="inspectImage" src="" style="transition: transform 0.2s; max-width:100%; max-height:100%;">
+            </div>
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="adjustZoom(0.3)">➕ Zoom In</button>
+                <button class="zoom-btn" onclick="adjustZoom(-0.3)">➖ Zoom Out</button>
+            </div>
+        </div>
+
+        <div class="header">
+            <div style="font-weight:bold; font-size:18px;">♻️ Smart Rubble <span style="font-size:10px; opacity:0.8;">v3.3</span></div>
+            <button class="notification-btn" onclick="toggleNotifications()">
+                🔔 <span class="badge" id="notifBadge"></span>
+            </button>
+        </div>
+
+        <div class="notification-panel" id="notifPanel">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom: 1px solid var(--border-color);">
+                <strong>Message Center</strong><span onclick="toggleNotifications()" style="cursor:pointer">✕</span>
+            </div>
+            <div id="notifList"></div>
+        </div>
+
+        <div class="content">
+            <div id="home" class="page active">
+                <div class="stats-card">
+                    <p style="margin:0;">Live Updates: You saved <span id="liveCO2" style="font-weight:bold; color:#0f766e">2.40</span> tons of CO₂</p>
+                    <div class="grid-stats">
+                        <div class="stat-box" id="statReportsbox"><b id="liveReports">128</b><br>Reports</div>
+                        <div class="stat-box" id="statTonsbox"><b id="liveTons">1,420</b><br>Tons</div>
+                        <div class="stat-box"><b id="liveReused">14</b><br>Reused</div>
+                        <div class="stat-box" style="color:green;"><b id="livePercent">+32.0%</b><br>Saved</div>
+                    </div>
+                </div>
+
+                <div class="map-wrapper">
+                    <div id="map"></div>
+                </div>
+
+                <h3 style="margin: 20px 0 10px 15px;">Live Stocks & Locations</h3>
+                <div class="search-container">
+                    <input type="text" id="stockSearch" class="search-input" placeholder="🔍 Search materials (Glass, Concrete...)" onkeyup="filterStockList()">
+                </div>
+
+                <div id="stockList" style="padding: 0 15px; padding-bottom: 20px;"></div>
+
+                <div class="important-section">
+                    <h4 style="margin: 0 0 10px 0; color: var(--teal-primary);">📌 Pinned Alerts</h4>
+                    <div id="importantList"></div>
+                </div>
+            </div>
+
+            <div id="reports" class="page">
+                <h2 style="margin:15px;">New AI Report</h2>
+                <div style="padding: 0 15px;">
+                    <div id="previewContainer" style="height:140px; background:#e5e7eb; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:10px; color:gray;">
+                        No Image Selected
+                    </div>
+                    
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <input type="file" id="imageInput" accept="image/*" onchange="previewImage(event)" style="display:none;">
+                        <button class="btn-secondary" onclick="document.getElementById('imageInput').click()">📁 File</button>
+                        <button class="btn-secondary" onclick="document.getElementById('imageInput').click()">📷 Camera</button>
+                    </div>
+
+                    <div style="display:flex; gap:5px; margin-bottom:10px;">
+                        <input type="text" id="locInput" placeholder="Location Name" style="flex:1; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                        <button class="btn-secondary" style="flex:0 0 50px;" onclick="geoLocate()">📍</button>
+                    </div>
+
+                    <input type="number" id="tonInput" placeholder="Approx. Tons" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid var(--border-color); box-sizing:border-box;">
+                    
+                    <!-- NEW: Radiation & Toxication Inputs -->
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+                        <input type="number" id="radiationInput" placeholder="Radiation (μSv/h)" step="0.01" style="padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                        <input type="number" id="toxicationInput" placeholder="Toxicity Level" step="1" min="0" max="100" style="padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                    </div>
+                    
+                    <button class="btn-action" onclick="submitReport()">Submit Report</button>
+                </div>
+                <h3 style="margin:20px 0 0 15px;">Active Reports</h3>
+                <div id="reportsList"></div>
+            </div>
+
+            <!-- NEW: Safety & Equipment Page -->
+            <div id="safety" class="page">
+                <h2 style="margin:15px;">Safety & Equipment</h2>
+                
+                <div class="safety-card">
+                    <h3 style="margin:0 0 15px 0; font-size:16px;">⚠️ Live Safety Monitor</h3>
+                    
+                    <div class="meter-container">
+                        <div class="meter-label">
+                            <span>☢️ Radiation Level</span>
+                            <span id="radiationValue" style="font-weight:bold;">0.12 μSv/h</span>
+                        </div>
+                        <div class="meter-bar">
+                            <div class="meter-fill meter-safe" id="radiationMeter" style="width: 12%;"></div>
+                        </div>
+                        <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">Safe Range: 0-0.5 μSv/h</div>
+                    </div>
+
+                    <div class="meter-container">
+                        <div class="meter-label">
+                            <span>🧪 Toxication Level</span>
+                            <span id="toxicationValue" style="font-weight:bold;">Level 2</span>
+                        </div>
+                        <div class="meter-bar">
+                            <div class="meter-fill meter-safe" id="toxicationMeter" style="width: 20%;"></div>
+                        </div>
+                        <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">Safe Range: 0-3</div>
+                    </div>
+
+                    <div style="margin-top:15px; padding:10px; background:var(--bg-app); border-radius:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:600;">Overall Risk Assessment</span>
+                            <span class="risk-indicator risk-low" id="overallRisk">LOW RISK</span>
+                        </div>
+                        <p style="font-size:12px; color:var(--text-muted); margin:8px 0 0 0;" id="riskMessage">
+                            ✅ Safe for standard collection procedures
+                        </p>
+                    </div>
+                </div>
+
+                <div class="safety-card">
+                    <h3 style="margin:0 0 10px 0; font-size:16px;">📋 Recommended Equipment</h3>
+                    <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">
+                        Based on current site conditions and detected hazard levels
+                    </p>
+                    <div class="equipment-list" id="equipmentList"></div>
+                </div>
+
+                <div class="safety-card">
+                    <h3 style="margin:0 0 10px 0; font-size:16px;">📱 Detection Devices</h3>
+                    <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">
+                        Connect radiation/toxicity detectors via magnetic attachment or Bluetooth
+                    </p>
+                    <button class="btn-action" onclick="simulateDeviceConnection()">🔗 Connect Detector Device</button>
+                    <div id="deviceStatus" style="margin-top:10px; padding:10px; background:var(--bg-app); border-radius:8px; font-size:13px; display:none;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="width:8px; height:8px; background:var(--safe-green); border-radius:50%;"></div>
+                            <span>Device Connected: RadDetect Pro X1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="safety-card">
+                    <h3 style="margin:0 0 10px 0; font-size:16px;">📊 Site Classification History</h3>
+                    <div id="classificationHistory"></div>
+                </div>
+            </div>
+
+            <div id="stats" class="page">
+                <h2 style="margin:20px;">Eco Analytics</h2>
+                <div class="list-item">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span>Material Breakdown</span>
+                        <span style="font-weight:bold; color:var(--teal-primary)">Live Data</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="ecoChart"></canvas>
+                    </div>
+                </div>
+                <div class="list-item">
+                    <strong>Monthly Top Materials</strong>
+                    <div style="margin-top:10px;">
+                        <div style="margin-bottom:5px; display:flex; justify-content:space-between; font-size:12px;"><span>Concrete</span><span>55%</span></div>
+                        <div style="height:6px; background:#e5e7eb; border-radius:4px;"><div style="width:55%; height:100%; background:var(--teal-primary); border-radius:4px;"></div></div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <div style="margin-bottom:5px; display:flex; justify-content:space-between; font-size:12px;"><span>Steel / Metal</span><span>25%</span></div>
+                        <div style="height:6px; background:#e5e7eb; border-radius:4px;"><div style="width:25%; height:100%; background:#f59e0b; border-radius:4px;"></div></div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <div style="margin-bottom:5px; display:flex; justify-content:space-between; font-size:12px;"><span>Glass</span><span>15%</span></div>
+                        <div style="height:6px; background:#e5e7eb; border-radius:4px;"><div style="width:15%; height:100%; background:var(--accent-glass); border-radius:4px;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="recycleBin" class="page">
+                <div style="display:flex; align-items:center; padding:15px;">
+                    <button class="btn-secondary" style="flex:0; margin-right:10px;" onclick="switchPage('settings')">⬅</button>
+                    <h2 style="margin:0;">Recycle Bin</h2>
+                </div>
+                <p style="padding:0 15px; color:gray; font-size:13px;">Recover deleted messages here.</p>
+                <div id="binList"></div>
+            </div>
+
+            <div id="settings" class="page">
+                <h2>Settings</h2>
+                <div id="profileSection"></div>
+                
+                <div class="settings-item">
+                    <span>Dark Appearance</span>
+                    <input type="checkbox" id="darkToggle" onchange="toggleDark()">
+                </div>
+                <div class="settings-item" onclick="openRecycleBin()">
+                    <span>🗑️ Recycle Bin</span><span>›</span>
+                </div>
+                <div class="settings-item">
+                    <span>App Version</span><span style="color:var(--text-muted)">v3.3</span>
+                </div>
+                <div id="logoutSection"></div>
+            </div>
+
+            <div id="auth" class="page">
+                <h2 id="authTitle" style="text-align:center; margin-top:40px;">Sign In</h2>
+                <div class="auth-form">
+                    <input type="email" placeholder="Email Address">
+                    <input type="password" placeholder="Password">
+                    <button class="btn-action" onclick="handleAuth()">Continue</button>
+                    <button class="btn-action" style="background:gray;" onclick="switchPage('settings')">Cancel</button>
+                </div>
+            </div>
+
+            <div id="recycle" class="page"><h2 style="margin:20px;">Recycling Hub</h2><div class="list-item">🧱 Concrete: 450 tons available</div></div>
+        </div>
+
+        <div class="bottom-nav">
+            <button class="nav-btn active" onclick="switchPage('home')">🏠<br>Home</button>
+            <button class="nav-btn" onclick="switchPage('reports')">📄<br>Reports</button>
+            <button class="nav-btn" onclick="switchPage('safety')">🛡️<br>Safety</button>
+            <button class="nav-btn" onclick="switchPage('stats')">📈<br>Stats</button>
+            <button class="nav-btn" onclick="switchPage('settings')">⚙️<br>Settings</button>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STATE ---
+        let isLoggedIn = false;
+        let currentImageData = "";
+        let currentZoom = 1;
+        let stats = { co2: 2.40, reports: 128, tons: 1420, reused: 14 };
+        let currentRadiation = 0.12; // μSv/h
+        let currentToxication = 2; // Level 0-10
+        
+        // ADDED SAFETY DATA TO LOCATIONS
+        let rubbleLocations = [
+            { 
+                id: 1, 
+                name: "Concrete Rubble", 
+                lat: 25.2854, 
+                lng: 51.5310, 
+                tons: 45, 
+                distance: "2.3 km", 
+                score: 82, 
+                color: 'green',
+                photo: 'https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=400&h=300&fit=crop',
+                radiation: 0.08,
+                toxicity: 1,
+                risk: 'low'
+            },
+            { 
+                id: 2, 
+                name: "Mixed Debris", 
+                lat: 25.2900, 
+                lng: 51.5400, 
+                tons: 32, 
+                distance: "1.8 km", 
+                score: 75, 
+                color: 'green',
+                photo: 'https://images.unsplash.com/photo-1605600659908-0ef719419d41?w=400&h=300&fit=crop',
+                radiation: 0.15,
+                toxicity: 3,
+                risk: 'low'
+            },
+            { 
+                id: 3, 
+                name: "Metal Scrap", 
+                lat: 25.2800, 
+                lng: 51.5250, 
+                tons: 28, 
+                distance: "3.1 km", 
+                score: 90, 
+                color: 'yellow',
+                photo: 'https://images.unsplash.com/photo-1567016432779-094069958ea5?w=400&h=300&fit=crop',
+                radiation: 0.42,
+                toxicity: 5,
+                risk: 'medium'
+            },
+            { 
+                id: 4, 
+                name: "Glass Shards", 
+                lat: 25.2880, 
+                lng: 51.5380, 
+                tons: 12, 
+                distance: "1.2 km", 
+                score: 95, 
+                color: 'cyan',
+                photo: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop',
+                radiation: 0.05,
+                toxicity: 1,
+                risk: 'low'
+            },
+            { 
+                id: 5, 
+                name: "Brick Rubble", 
+                lat: 25.2820, 
+                lng: 51.5350, 
+                tons: 38, 
+                distance: "2.7 km", 
+                score: 88, 
+                color: 'green',
+                photo: 'https://images.unsplash.com/photo-1590856029826-c7a73142bbf1?w=400&h=300&fit=crop',
+                radiation: 0.11,
+                toxicity: 2,
+                risk: 'low'
+            }
+        ];
+
+        // DEMO ACTIVE REPORTS WITH SAFETY DATA
+        let demoReports = [
+            {
+                id: 1,
+                location: "Al Rayyan Industrial Zone",
+                tons: 35,
+                status: "approved",
+                date: "Jan 28, 2026",
+                photo: 'https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=400&h=300&fit=crop',
+                material: "Concrete & Brick",
+                radiation: 0.09,
+                toxicity: 1,
+                risk: 'low'
+            },
+            {
+                id: 2,
+                location: "West Bay Construction Site",
+                tons: 22,
+                status: "reviewing",
+                date: "Jan 29, 2026",
+                photo: 'https://images.unsplash.com/photo-1605600659908-0ef719419d41?w=400&h=300&fit=crop',
+                material: "Mixed Debris",
+                radiation: 0.58,
+                toxicity: 6,
+                risk: 'high'
+            },
+            {
+                id: 3,
+                location: "Education City Demolition",
+                tons: 18,
+                status: "pending",
+                date: "Jan 30, 2026",
+                photo: 'https://images.unsplash.com/photo-1567016432779-094069958ea5?w=400&h=300&fit=crop',
+                material: "Steel & Metal",
+                radiation: 0.35,
+                toxicity: 4,
+                risk: 'medium'
+            }
+        ];
+
+        // Equipment database based on risk levels
+        const equipmentDatabase = {
+            low: [
+                { name: "Standard Gloves", icon: "🧤", required: true },
+                { name: "Safety Helmet", icon: "⛑️", required: true },
+                { name: "Steel-Toe Boots", icon: "🥾", required: true },
+                { name: "Basic Face Mask", icon: "😷", required: false },
+                { name: "High-Vis Vest", icon: "🦺", required: true }
+            ],
+            medium: [
+                { name: "Heavy-Duty Gloves", icon: "🧤", required: true },
+                { name: "Safety Helmet", icon: "⛑️", required: true },
+                { name: "Steel-Toe Boots", icon: "🥾", required: true },
+                { name: "Respirator Mask", icon: "😷", required: true },
+                { name: "High-Vis Vest", icon: "🦺", required: true },
+                { name: "Safety Goggles", icon: "🥽", required: true },
+                { name: "Radiation Detector", icon: "📡", required: true },
+                { name: "Hazmat Coveralls", icon: "🥼", required: false }
+            ],
+            high: [
+                { name: "Chemical-Resistant Gloves", icon: "🧤", required: true },
+                { name: "Full-Face Respirator", icon: "😷", required: true },
+                { name: "Safety Helmet", icon: "⛑️", required: true },
+                { name: "Steel-Toe Boots", icon: "🥾", required: true },
+                { name: "Hazmat Full Suit", icon: "🥼", required: true },
+                { name: "High-Vis Vest", icon: "🦺", required: true },
+                { name: "Radiation Detector", icon: "📡", required: true },
+                { name: "Toxicity Monitor", icon: "🧪", required: true },
+                { name: "Lead Shielding", icon: "🛡️", required: true },
+                { name: "Emergency Decon Kit", icon: "🚿", required: false }
+            ]
+        };
+
+        let notifications = [
+            { id: 1, title: "Welcome!", text: "Start reporting rubble to earn points.", page: "home", important: false },
+            { id: 2, title: "High Risk Alert!", text: "West Bay site shows elevated radiation levels", page: "safety", important: true }
+        ];
+        
+        let deletedNotifications = [];
+        let classificationHistory = [];
+
+        // --- SAFETY FUNCTIONS ---
+        function calculateRiskLevel(radiation, toxicity) {
+            // Radiation thresholds (μSv/h): < 0.3 = low, 0.3-0.5 = medium, > 0.5 = high
+            // Toxicity thresholds: < 3 = low, 3-5 = medium, > 5 = high
+            
+            if (radiation > 0.5 || toxicity > 5) return 'high';
+            if (radiation > 0.3 || toxicity > 3) return 'medium';
+            return 'low';
+        }
+
+        function updateSafetyMeters(radiation, toxicity) {
+            currentRadiation = radiation;
+            currentToxication = toxicity;
+            
+            // Update radiation meter
+            const radPercent = Math.min((radiation / 1.0) * 100, 100);
+            const radMeter = document.getElementById('radiationMeter');
+            const radValue = document.getElementById('radiationValue');
+            
+            radValue.textContent = `${radiation.toFixed(2)} μSv/h`;
+            radMeter.style.width = `${radPercent}%`;
+            
+            if (radiation > 0.5) {
+                radMeter.className = 'meter-fill meter-danger radiation-alert';
+            } else if (radiation > 0.3) {
+                radMeter.className = 'meter-fill meter-warning';
+            } else {
+                radMeter.className = 'meter-fill meter-safe';
+            }
+            
+            // Update toxicity meter
+            const toxPercent = Math.min((toxicity / 10) * 100, 100);
+            const toxMeter = document.getElementById('toxicationMeter');
+            const toxValue = document.getElementById('toxicationValue');
+            
+            toxValue.textContent = `Level ${toxicity}`;
+            toxMeter.style.width = `${toxPercent}%`;
+            
+            if (toxicity > 5) {
+                toxMeter.className = 'meter-fill meter-danger';
+            } else if (toxicity > 3) {
+                toxMeter.className = 'meter-fill meter-warning';
+            } else {
+                toxMeter.className = 'meter-fill meter-safe';
+            }
+            
+            // Update overall risk
+            const risk = calculateRiskLevel(radiation, toxicity);
+            const riskBadge = document.getElementById('overallRisk');
+            const riskMessage = document.getElementById('riskMessage');
+            
+            riskBadge.className = 'risk-indicator';
+            if (risk === 'high') {
+                riskBadge.classList.add('risk-high');
+                riskBadge.textContent = 'HIGH RISK';
+                riskMessage.innerHTML = '⚠️ Specialized equipment and trained personnel required. Follow safety protocols strictly.';
+            } else if (risk === 'medium') {
+                riskBadge.classList.add('risk-medium');
+                riskBadge.textContent = 'MEDIUM RISK';
+                riskMessage.innerHTML = '⚡ Enhanced safety equipment recommended. Monitor levels continuously.';
+            } else {
+                riskBadge.classList.add('risk-low');
+                riskBadge.textContent = 'LOW RISK';
+                riskMessage.innerHTML = '✅ Safe for standard collection procedures with basic protective equipment.';
+            }
+            
+            // Update equipment recommendations
+            updateEquipmentList(risk);
+        }
+
+        function updateEquipmentList(riskLevel) {
+            const list = document.getElementById('equipmentList');
+            const equipment = equipmentDatabase[riskLevel];
+            
+            list.innerHTML = '';
+            equipment.forEach(item => {
+                const div = document.createElement('div');
+                div.className = `equipment-item ${item.required ? 'equipment-required' : 'equipment-optional'}`;
+                div.innerHTML = `
+                    <div class="equipment-icon">${item.icon}</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;">${item.name}</div>
+                        <div style="font-size:11px; color:var(--text-muted);">
+                            ${item.required ? '🔴 Required' : '🟡 Optional'}
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function simulateDeviceConnection() {
+            const status = document.getElementById('deviceStatus');
+            status.style.display = 'block';
+            showToast("Detector Device Connected!");
+            
+            // Simulate receiving data from device
+            setTimeout(() => {
+                const newRadiation = (Math.random() * 0.6).toFixed(2);
+                const newToxicity = Math.floor(Math.random() * 8);
+                updateSafetyMeters(parseFloat(newRadiation), newToxicity);
+                showToast("Live data received from detector");
+            }, 2000);
+        }
+
+        function addToClassificationHistory(location, radiation, toxicity, risk) {
+            const entry = {
+                date: new Date().toLocaleString(),
+                location,
+                radiation,
+                toxicity,
+                risk
+            };
+            classificationHistory.unshift(entry);
+            if (classificationHistory.length > 10) classificationHistory.pop();
+            renderClassificationHistory();
+        }
+
+        function renderClassificationHistory() {
+            const container = document.getElementById('classificationHistory');
+            if (classificationHistory.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted); font-size:12px;">No classification data yet</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            classificationHistory.slice(0, 5).forEach(entry => {
+                const div = document.createElement('div');
+                div.style.cssText = 'padding:8px; background:var(--bg-app); border-radius:6px; margin-bottom:8px; font-size:12px;';
+                
+                let riskClass = 'risk-low';
+                if (entry.risk === 'medium') riskClass = 'risk-medium';
+                if (entry.risk === 'high') riskClass = 'risk-high';
+                
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <strong>${entry.location}</strong>
+                        <span class="risk-indicator ${riskClass}">${entry.risk.toUpperCase()}</span>
+                    </div>
+                    <div style="color:var(--text-muted);">
+                        ☢️ ${entry.radiation} μSv/h • 🧪 Level ${entry.toxicity} • ${entry.date}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // --- CHART JS INIT ---
+        let ecoChartInstance = null;
+        function initChart() {
+            const ctx = document.getElementById('ecoChart').getContext('2d');
+            if (ecoChartInstance) ecoChartInstance.destroy();
+            
+            ecoChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Concrete', 'Metal', 'Glass'],
+                    datasets: [{
+                        label: 'Recycled Volume (Tons)',
+                        data: [450, 200, 120],
+                        backgroundColor: [
+                            '#0d9488',
+                            '#f59e0b',
+                            '#22d3ee',
+                        ],
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // --- GOOGLE MAPS INIT ---
+        let map;
+        function initMap() {
+            const center = { lat: 25.2854, lng: 51.5310 };
+            map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 12, center: center, disableDefaultUI: true,
+                styles: [ { "featureType": "poi", "stylers": [ { "visibility": "off" } ] } ]
+            });
+
+            rubbleLocations.forEach(loc => {
+                let iconUrl = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+                if (loc.color === 'yellow') iconUrl = "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
+                if (loc.color === 'red') iconUrl = "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+                if (loc.color === 'cyan') iconUrl = "https://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+
+                const marker = new google.maps.Marker({
+                    position: { lat: loc.lat, lng: loc.lng },
+                    map: map, title: loc.name, icon: iconUrl
+                });
+
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `<b>${loc.name}</b><br>${loc.tons} tons available<br>☢️ ${loc.radiation} μSv/h<br>🧪 Toxicity: ${loc.toxicity}`
+                });
+                marker.addListener("click", () => { infoWindow.open(map, marker); });
+            });
+        }
+
+        // --- NOTIFICATION LOGIC ---
+        function renderNotifications() {
+            const list = document.getElementById('notifList');
+            const impList = document.getElementById('importantList');
+            const badge = document.getElementById('notifBadge');
+            
+            list.innerHTML = ""; impList.innerHTML = "";
+
+            if (notifications.length === 0) {
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:gray;">No new notifications ✅</div>';
+                badge.style.display = 'none';
+            } else {
+                badge.style.display = 'block';
+            }
+
+            notifications.forEach(n => {
+                const item = document.createElement('div');
+                item.className = 'notif-item';
+                item.innerHTML = `
+                    <div onclick="handleNotifClick('${n.page}')" style="flex:1; cursor:pointer;">
+                        <b>${n.title}</b><br><span style="color:var(--text-muted)">${n.text}</span>
+                    </div>
+                    <div class="notif-actions">
+                        <button onclick="toggleImp(${n.id})">${n.important ? '⭐' : '☆'}</button>
+                        <button onclick="deleteNotif(${n.id})">🗑️</button>
+                    </div>`;
+                list.appendChild(item);
+
+                if (n.important) {
+                    const card = document.createElement('div'); card.className = 'important-card';
+                    card.innerHTML = `<b>${n.title}</b>: ${n.text}`; impList.appendChild(card);
+                }
+            });
+        }
+
+        function handleNotifClick(pageId) {
+            switchPage(pageId);
+            toggleNotifications();
+        }
+
+        function deleteNotif(id) {
+            const item = notifications.find(x => x.id === id);
+            if (item) {
+                deletedNotifications.push(item);
+                notifications = notifications.filter(x => x.id !== id);
+                renderNotifications();
+                showToast("Moved to Recycle Bin");
+            }
+        }
+
+        function openRecycleBin() {
+            switchPage('recycleBin');
+            renderBin();
+        }
+
+        function renderBin() {
+            const list = document.getElementById('binList');
+            list.innerHTML = "";
+            if(deletedNotifications.length === 0) {
+                list.innerHTML = '<div style="text-align:center; padding:20px;">Bin is empty 🗑️</div>';
+                return;
+            }
+            deletedNotifications.forEach(n => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                item.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div><b>${n.title}</b><br>${n.text}</div>
+                        <button class="btn-action" style="width:auto; padding:5px 10px; font-size:12px;" onclick="restoreNotif(${n.id})">Restore ↩️</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function restoreNotif(id) {
+            const item = deletedNotifications.find(x => x.id === id);
+            if(item) {
+                notifications.unshift(item);
+                deletedNotifications = deletedNotifications.filter(x => x.id !== id);
+                renderBin();
+                showToast("Message Restored");
+                renderNotifications();
+            }
+        }
+
+        function toggleNotifications() {
+            const p = document.getElementById('notifPanel');
+            p.style.display = (p.style.display === 'block') ? 'none' : 'block';
+        }
+        function toggleImp(id) { const n = notifications.find(x => x.id === id); n.important = !n.important; renderNotifications(); }
+
+        // --- RENDER DEMO REPORTS ---
+        function renderDemoReports() {
+            const list = document.getElementById('reportsList');
+            
+            demoReports.forEach(report => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                
+                let statusClass = 'status-pending';
+                let statusText = 'Pending Review';
+                if (report.status === 'approved') {
+                    statusClass = 'status-approved';
+                    statusText = 'Approved ✓';
+                } else if (report.status === 'reviewing') {
+                    statusClass = 'status-reviewing';
+                    statusText = 'Under Review';
+                }
+                
+                let riskClass = 'risk-low';
+                let riskText = 'LOW';
+                if (report.risk === 'medium') {
+                    riskClass = 'risk-medium';
+                    riskText = 'MEDIUM';
+                } else if (report.risk === 'high') {
+                    riskClass = 'risk-high';
+                    riskText = 'HIGH';
+                }
+                
+                item.innerHTML = `
+                    <img src="${report.photo}" onclick="openInspector('${report.photo}')" 
+                         style="width:100%; border-radius:8px; margin-bottom:10px; cursor:zoom-in;">
+                    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+                        <div>
+                            <strong>${report.location}</strong>
+                            <p style="color:gray; font-size:12px; margin:4px 0;">${report.material}</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                            <br><span class="risk-indicator ${riskClass}" style="margin-top:5px; display:inline-block;">${riskText} RISK</span>
+                        </div>
+                    </div>
+                    <p style="color:var(--text-muted); font-size:13px; margin:0;">
+                        ${report.tons} Tons • ${report.date}
+                    </p>
+                    <div style="margin-top:8px; padding:8px; background:var(--bg-app); border-radius:6px; font-size:12px;">
+                        ☢️ ${report.radiation} μSv/h • 🧪 Toxicity Level ${report.toxicity}
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // --- REPORTING LOGIC ---
+        function submitReport() {
+            const loc = document.getElementById('locInput').value;
+            const tons = document.getElementById('tonInput').value;
+            const radiation = parseFloat(document.getElementById('radiationInput').value) || 0;
+            const toxicity = parseInt(document.getElementById('toxicationInput').value) || 0;
+            
+            if (!loc || !tons) return alert("Please fill in location and tons");
+
+            const risk = calculateRiskLevel(radiation, toxicity);
+            
+            // Add to classification history
+            addToClassificationHistory(loc, radiation, toxicity, risk);
+
+            // Add to Report List
+            const list = document.getElementById('reportsList');
+            const item = document.createElement('div'); item.className = 'list-item';
+            
+            let riskClass = 'risk-low';
+            let riskText = 'LOW';
+            if (risk === 'medium') {
+                riskClass = 'risk-medium';
+                riskText = 'MEDIUM';
+            } else if (risk === 'high') {
+                riskClass = 'risk-high';
+                riskText = 'HIGH';
+            }
+            
+            let imgTag = currentImageData ? `<img src="${currentImageData}" onclick="openInspector('${currentImageData}')" style="width:100%; border-radius:8px; margin-bottom:10px; cursor:zoom-in;">` : '';
+            item.innerHTML = `${imgTag}
+                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+                    <strong>${loc}</strong>
+                    <div style="text-align:right;">
+                        <span class="status-badge status-pending">Pending Review</span>
+                        <br><span class="risk-indicator ${riskClass}" style="margin-top:5px; display:inline-block;">${riskText} RISK</span>
+                    </div>
+                </div>
+                <p style="color:var(--text-muted); font-size:13px; margin:0;">${tons} Tons • Just now</p>
+                <div style="margin-top:8px; padding:8px; background:var(--bg-app); border-radius:6px; font-size:12px;">
+                    ☢️ ${radiation} μSv/h • 🧪 Toxicity Level ${toxicity}
+                </div>`;
+            list.prepend(item);
+
+            // TRIGGER NEW NOTIFICATION
+            const newNotif = {
+                id: Date.now(),
+                title: "Report Submitted",
+                text: `${loc} - ${riskText} Risk detected`,
+                page: "reports",
+                important: risk === 'high'
+            };
+            notifications.unshift(newNotif);
+            renderNotifications();
+
+            // Update safety meters if on safety page
+            updateSafetyMeters(radiation, toxicity);
+
+            showToast("Report Posted with Safety Classification!");
+            
+            // Clear inputs
+            document.getElementById('locInput').value = ""; 
+            document.getElementById('tonInput').value = "";
+            document.getElementById('radiationInput').value = "";
+            document.getElementById('toxicationInput').value = "";
+            document.getElementById('previewContainer').innerHTML = "No Image Selected";
+            currentImageData = "";
+        }
+
+        function previewImage(e) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                document.getElementById('previewContainer').innerHTML = `<img src="${reader.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                currentImageData = reader.result;
+            };
+            if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]);
+        }
+        
+        function geoLocate() {
+            document.getElementById('locInput').value = "Locating...";
+            setTimeout(() => { document.getElementById('locInput').value = "25.285, 51.531"; }, 1000);
+        }
+
+        // --- STOCK LIST RENDER ---
+        function renderStockList(filterText = "") {
+            const list = document.getElementById('stockList');
+            list.innerHTML = '';
+            
+            const filtered = rubbleLocations.filter(loc => 
+                loc.name.toLowerCase().includes(filterText.toLowerCase())
+            );
+
+            if(filtered.length === 0) {
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:gray;">No materials found.</div>';
+                return;
+            }
+
+            filtered.forEach(loc => {
+                const item = document.createElement('div');
+                item.className = 'list-item stock-item';
+                let colorClass = 'marker-green';
+                if(loc.color === 'yellow') colorClass = 'marker-yellow';
+                if(loc.color === 'red') colorClass = 'marker-red';
+                if(loc.color === 'cyan') colorClass = 'marker-cyan';
+
+                let riskClass = 'risk-low';
+                if (loc.risk === 'medium') riskClass = 'risk-medium';
+                if (loc.risk === 'high') riskClass = 'risk-high';
+
+                item.innerHTML = `
+                    <div class="stock-marker ${colorClass}"></div>
+                    <img src="${loc.photo}" class="stock-photo" onclick="openInspector('${loc.photo}')" alt="${loc.name}">
+                    <div style="flex:1;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong>${loc.name}</strong>
+                            <span class="risk-indicator ${riskClass}" style="font-size:9px; padding:2px 6px;">${loc.risk.toUpperCase()}</span>
+                        </div>
+                        <p style="margin:5px 0; color:var(--text-muted); font-size:13px;">${loc.distance} • ${loc.tons} tons</p>
+                        <p style="margin:0; color:var(--teal-primary); font-size:12px;">Reuse Score: ${loc.score}%</p>
+                        <p style="margin:3px 0 0 0; font-size:11px; color:var(--text-muted);">☢️ ${loc.radiation} μSv/h • 🧪 Lvl ${loc.toxicity}</p>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+        
+        function filterStockList() { renderStockList(document.getElementById('stockSearch').value); }
+        
+        function updateLiveStats() {
+            const box = document.getElementById('statTonsbox');
+            box.classList.add('updating');
+            setTimeout(() => box.classList.remove('updating'), 500);
+        }
+        setInterval(updateLiveStats, 5000);
+
+        // --- NAVIGATION ---
+        function switchPage(pId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pId).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.remove('active');
+                if (b.getAttribute('onclick').includes(pId)) b.classList.add('active');
+            });
+            if(pId === 'stats') setTimeout(initChart, 100);
+            if(pId === 'safety') {
+                updateSafetyMeters(currentRadiation, currentToxication);
+                renderClassificationHistory();
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('successToast');
+            t.innerText = msg; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2500);
+        }
+        function toggleDark() { document.body.classList.toggle('dark-mode'); }
+        function renderProfile() {
+            const container = document.getElementById('profileSection');
+            const logoutArea = document.getElementById('logoutSection');
+            if (isLoggedIn) {
+                container.innerHTML = `
+                <div class="profile-box"><h3>John Doe</h3><div class="xp-bar-bg"><div class="xp-bar-fill"></div></div><p style="font-size:10px; margin-top:5px;">Level 5 Recycler</p></div>`;
+                logoutArea.innerHTML = `<div style="text-align:center; color:#ef4444; margin-top:20px; font-weight:bold; cursor:pointer;" onclick="logout()">Log Out</div>`;
+            } else {
+                container.innerHTML = `<div class="profile-box" onclick="switchPage('auth')"><h3>Sign In</h3><p>Manage account</p></div>`;
+                logoutArea.innerHTML = "";
+            }
+        }
+        function handleAuth() { isLoggedIn = true; renderProfile(); switchPage('settings'); }
+        function logout() { isLoggedIn = false; renderProfile(); showToast("Logged out"); }
+        function openInspector(src) { document.getElementById('inspectImage').src = src; document.getElementById('imageModal').style.display = 'flex'; currentZoom = 1; document.getElementById('inspectImage').style.transform = 'scale(1)'; }
+        function closeInspector() { document.getElementById('imageModal').style.display = 'none'; }
+        function adjustZoom(amt) { currentZoom += amt; if(currentZoom < 0.5) currentZoom = 0.5; document.getElementById('inspectImage').style.transform = `scale(${currentZoom})`; }
+
+        // Init
+        renderProfile();
+        renderNotifications();
+        renderStockList();
+        renderDemoReports();
+        updateSafetyMeters(currentRadiation, currentToxication);
+        renderClassificationHistory();
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao&libraries=places&callback=initMap" async defer></script>
+</body>
+</html>
